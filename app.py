@@ -15,7 +15,7 @@ shipments = [
 # Home route (just used to verify the server is running)
 @app.route("/")
 def home():
-    return "Hello, RetailReady!"
+    return "Hello!"
 
 # GET request (fetch all shipments)
 @app.route("/api/shipments", methods=["GET"])
