@@ -9,6 +9,11 @@ function App() {
   const [newItem, setNewItem] = useState("");
   const [newQuantity, setNewQuantity] = useState("");
 
+  // tracks which shipment (if any) is currently being edited
+  const [editingId, setEditingId] = useState(null);
+  const [editItem, setEditItem] = useState("");
+  const [editQuantity, setEditQuantity] = useState("");
+
   // runs once when the component loads and it fetches all the current shipments
   useEffect(() => {
     console.log("Fetching shipments...");
@@ -42,6 +47,39 @@ function App() {
         setNewQuantity("");
       })
       .catch((err) => console.error("Failed to add shipment:", err));
+  };
+
+  // starts editing a shipment by pre-filling the edit form
+  const startEdit = (shipment) => {
+    setEditingId(shipment.id);
+    setEditItem(shipment.item);
+    setEditQuantity(String(shipment.quantity));
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditItem("");
+    setEditQuantity("");
+  };
+
+  // PUT request to save changes to an existing shipment
+  const handleUpdate = (id) => {
+    if (!editItem || !editQuantity) return;
+
+    fetch(`http://localhost:5001/api/shipments/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        item: editItem,
+        quantity: parseInt(editQuantity),
+      }),
+    })
+      .then((res) => res.json())
+      .then((updated) => {
+        setShipments(shipments.map((s) => (s.id === id ? updated : s)));
+        cancelEdit();
+      })
+      .catch((err) => console.error("Failed to update shipment:", err));
   };
 
   // function to delete a shipment by ID
@@ -88,15 +126,43 @@ function App() {
         <p style={styles.loading}>Loading shipments...</p>
       ) : (
         <div style={styles.cardContainer}>
-          {shipments.map((s) => (
-            <div key={s.id} style={styles.card}>
-              <h2 style={styles.item}>{s.item}</h2>
-              <p style={styles.details}>Quantity: {s.quantity}</p>
-              <button onClick={() => handleDelete(s.id)} style={styles.delete}>
-                Delete
-              </button>
-            </div>
-          ))}
+          {shipments.map((s) =>
+            editingId === s.id ? (
+              <div key={s.id} style={styles.card}>
+                <input
+                  type="text"
+                  value={editItem}
+                  onChange={(e) => setEditItem(e.target.value)}
+                  style={styles.input}
+                />
+                <input
+                  type="number"
+                  value={editQuantity}
+                  onChange={(e) => setEditQuantity(e.target.value)}
+                  style={styles.input}
+                />
+                <div>
+                  <button onClick={() => handleUpdate(s.id)} style={styles.button}>
+                    Save
+                  </button>
+                  <button onClick={cancelEdit} style={styles.cancel}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div key={s.id} style={styles.card}>
+                <h2 style={styles.item}>{s.item}</h2>
+                <p style={styles.details}>Quantity: {s.quantity}</p>
+                <button onClick={() => startEdit(s)} style={styles.edit}>
+                  Edit
+                </button>
+                <button onClick={() => handleDelete(s.id)} style={styles.delete}>
+                  Delete
+                </button>
+              </div>
+            )
+          )}
         </div>
       )}
     </div>
@@ -161,10 +227,28 @@ const styles = {
     marginTop: "0.5rem",
     color: "#555",
   },
+  edit: {
+    marginTop: "0.75rem",
+    marginRight: "0.5rem",
+    padding: "0.25rem 0.5rem",
+    backgroundColor: "#2196F3",
+    color: "white",
+    border: "none",
+    cursor: "pointer",
+  },
   delete: {
     marginTop: "0.75rem",
     padding: "0.25rem 0.5rem",
     backgroundColor: "#f44336",
+    color: "white",
+    border: "none",
+    cursor: "pointer",
+  },
+  cancel: {
+    marginTop: "0.75rem",
+    marginLeft: "0.5rem",
+    padding: "0.25rem 0.5rem",
+    backgroundColor: "#999",
     color: "white",
     border: "none",
     cursor: "pointer",
